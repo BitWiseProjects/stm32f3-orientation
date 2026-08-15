@@ -1,0 +1,42 @@
+[package]
+name = "viewer"
+description = "The browser end: reads orientation packets over Web Serial and draws the board."
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Its own workspace. See firmware/Cargo.toml for why the three are kept apart.
+[workspace]
+
+[dependencies]
+# WebGL2 rendering. Runs in the browser rather than natively, which is
+# deliberate — the native path here is deprecated OpenGL on macOS.
+three-d = "0.19"
+
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+
+# The same maths the firmware runs. Not a copy of it — the same source files.
+vector = { path = "../math/vector" }
+
+# And the same wire format, for the same reason. Both ends compile one
+# definition of where every field starts, so they cannot drift apart.
+packet = { path = "../math/packet" }
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    "Document",
+    "Element",
+    "HtmlElement",
+    "Navigator",
+    "Window",
+    # The Web Serial API. Everything in this group sits behind
+    # `--cfg=web_sys_unstable_apis`, which .cargo/config.toml sets.
+    "Serial",
+    "SerialPort",
+    "SerialOptions",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
+]

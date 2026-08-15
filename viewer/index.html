@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>stm32f3-orientation — viewer</title>
+    <link data-trunk rel="rust" />
+    <style>
+      :root {
+        --ink: #0e121a;
+        --panel: #141a24;
+        --graticule: #1f2836;
+        --amber: #f0a32c;
+        --amber-hover: #ffb84d;
+        --paper: #e6e9ee;
+        --muted: #8593a6;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--ink);
+        overflow: hidden;
+        font: 15px/1.4 ui-sans-serif, system-ui, sans-serif;
+        color: var(--paper);
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #panel {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--panel);
+        border: 1px solid var(--graticule);
+        border-radius: 8px;
+      }
+
+      #connect {
+        font: inherit;
+        font-weight: 600;
+        color: var(--ink);
+        background: var(--amber);
+        border: 0;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+      }
+
+      #connect:hover:enabled {
+        background: var(--amber-hover);
+      }
+
+      #connect:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      #status {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- three-d takes the first <canvas> in the DOM when WindowSettings::canvas
+         is None. It does not create one. -->
+    <canvas id="viewer"></canvas>
+
+    <div id="panel">
+      <!-- The browser will only show its serial port picker in response to a
+           real click, so this button cannot be replaced by connecting on load. -->
+      <button id="connect">Connect</button>
+      <span id="status">not connected</span>
+    </div>
+  </body>
+</html>

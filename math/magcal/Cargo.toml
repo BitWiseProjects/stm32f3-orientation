@@ -1,0 +1,13 @@
+[package]
+name = "magcal"
+description = "Hard-iron calibration: a least-squares sphere fit that never stores a sample."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+glam = { workspace = true }
+
+# Scalar `sqrt`, `fabs` and `atan2`. `glam` brings its own copy for vector
+# maths, but nothing here can reach it, and `f64::sqrt` is a `std` method.
+libm = { workspace = true }

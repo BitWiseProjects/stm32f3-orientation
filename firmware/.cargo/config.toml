@@ -1,0 +1,25 @@
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+# `cargo run --bin 01_ring` flashes the board and streams `defmt` output back
+# over the debug cable. There is no separate flash step.
+runner = ["probe-rs", "run", "--chip", "STM32F303VC", "--log-format=oneline"]
+
+rustflags = [
+  # flip-link puts the stack below RAM instead of above it, so a stack
+  # overflow faults immediately rather than quietly eating your variables.
+  "-C", "linker=flip-link",
+  "-C", "link-arg=-Tlink.x",
+  "-C", "link-arg=-Tdefmt.x",
+  # Needed because the flash and RAM addresses are not aligned to 0x10000.
+  "-C", "link-arg=--nmagic",
+]
+
+[build]
+# Cortex-M4F: ARMv7E-M with a hardware floating point unit. The `hf` matters —
+# the fusion maths is all `f32`, and without the FPU every multiply would be a
+# function call.
+target = "thumbv7em-none-eabihf"
+
+[alias]
+# `cargo rb 02_compass` is `cargo run --bin 02_compass`.
+rb = "run --bin"
+rrb = "run --release --bin"

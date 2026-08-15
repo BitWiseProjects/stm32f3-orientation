@@ -1,0 +1,22 @@
+[build]
+# Trunk passes this target explicitly, so this line is not what makes
+# `trunk serve` work. It is here so bare `cargo build`, `cargo check` and
+# rust-analyzer in this directory agree with trunk instead of trying to build a
+# browser app for macOS.
+target = "wasm32-unknown-unknown"
+
+# The Web Serial API is stable in Chrome but `web-sys` still gates its whole
+# `Serial` family behind this flag. It is a plain `--cfg`, not a nightly
+# feature — a stable toolchain builds this fine.
+#
+# Under `[build]` rather than `[target.wasm32-unknown-unknown]`, so that it
+# survives `cargo test --target <your host>` — which is the only way to run the
+# tests in `run.rs`, since the line above otherwise builds the test harness
+# itself for the browser. Cargo takes a `[target.*]` list in preference to this
+# one rather than adding to it, so having both would silently drop the flag on
+# every target but wasm, which is what used to happen.
+#
+# Careful: setting the RUSTFLAGS environment variable *also* replaces this list
+# rather than adding to it, so exporting RUSTFLAGS for some unrelated reason
+# removes the flag and the build fails with "no method named `serial`".
+rustflags = ["--cfg=web_sys_unstable_apis"]

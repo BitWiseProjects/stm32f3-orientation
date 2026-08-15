@@ -1,0 +1,67 @@
+[package]
+name = "stm32f3-orientation-firmware"
+description = "STM32F3 Discovery orientation firmware, in eight stages."
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Its own workspace, separate from math/ and viewer/. Each of the three has a
+# different compilation target, and `.cargo/config.toml` is read per directory —
+# so keeping them apart is what stops `cargo build` here from trying to build a
+# browser app, or feature unification from dragging `std` into a `no_std` build.
+[workspace]
+
+[dependencies]
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7"
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+
+# The `ld` feature is on by default and makes the HAL generate the linker's
+# memory map for the part named here. That is why there is no `memory.x` or
+# `build.rs` in this repo — the flash and RAM sizes come from the chip feature.
+stm32f3xx-hal = { version = "0.10", features = ["stm32f303xc"] }
+
+# The two sensor drivers, and both of them are the second one we tried.
+#
+# The gyroscope is an **I3G4250D**, not the L3GD20 that most STM32F3 Discovery
+# material assumes. The parts differ in output data rate (100/200/400/800 Hz
+# against 95/190/380/760) and lowest full scale (245 dps against 250), so the
+# wrong driver returns numbers that look completely reasonable and are a few
+# percent wrong.
+i3g4250d = "0.3"
+
+# The e-compass is an **LSM303AGR**, not the LSM303DLHC. Same trap, worse:
+# the two parts share both I2C addresses and their accelerometer halves are
+# compatible enough that DLHC code drives an AGR's accelerometer perfectly.
+# Their magnetometers are unrelated. Confirmed on this board — the AGR
+# identification registers read 0x40 and 0x33, the DLHC's read nothing.
+#
+# Version 0.3 rather than the current 1.x, because 1.x is built on
+# embedded-hal 1.0 and `stm32f3xx-hal` 0.10 still provides 0.2.
+lsm303agr = "0.3"
+
+# Float maths that std would otherwise provide.
+libm = "0.2"
+
+# The fusion, shared with the browser. Same source, both targets.
+attitude = { path = "../math/attitude" }
+
+# The hard-iron fit, likewise. Stage 3 runs it on the board; the browser runs
+# the same source over the same samples in Act 5.
+magcal = { path = "../math/magcal" }
+
+# The wire format. A packet is an agreement between two programs, so both of
+# them compile the one file that describes it rather than a copy each.
+packet = { path = "../math/packet" }
+
+[profile.dev]
+opt-level = 's'
+codegen-units = 1
+
+[profile.release]
+opt-level = 's'
+codegen-units = 1
+lto = 'fat'
+debug = 2

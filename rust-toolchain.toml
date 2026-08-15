@@ -1,0 +1,10 @@
+# One toolchain for all three workspaces. rustup searches upward from the
+# working directory, so this file applies whether you are in firmware/,
+# viewer/ or math/.
+[toolchain]
+channel = "stable"
+targets = [
+    "thumbv7em-none-eabihf", # the STM32F303VCT6 — Cortex-M4F, hardware float
+    "wasm32-unknown-unknown", # the browser
+]
+components = ["rust-src", "llvm-tools"]
