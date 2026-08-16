@@ -19,7 +19,8 @@
 //! | [`serial`] | Opening the port, reading it, and the state it fills |
 //! | [`parser`] | Finding whole packets in a stream of bytes |
 //! | [`run`] | A calibration run: which view to show, and the cloud so far |
-//! | [`scene`] | The camera, the model, the lights, the colours |
+//! | [`cloud`] | Where a sample in nanotesla lands on screen |
+//! | [`scene`] | The cameras, the model, the point cloud, the lights, the colours |
 //! | [`dom`] | The status line and the Connect button |
 //!
 //! What a packet *is* lives outside this crate entirely, in `math/packet`, so
@@ -51,7 +52,12 @@
 //! It has to key on the run *state* and not on the packet type: stage 7 has
 //! been sending idle calibration packets at 2 Hz since it booted, so anything
 //! watching for "a calibration packet" would switch views on connect.
+//!
+//! The one thing the board does *not* decide is when the calibration view goes
+//! away. It stays up after the run so the answer can be seen against the cloud
+//! it came from, and Escape is what puts the model back.
 
+mod cloud;
 mod dom;
 mod parser;
 mod run;
@@ -67,7 +73,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen_futures::spawn_local;
 
-use dom::{set_connect_enabled, set_status};
+use dom::{set_connect_enabled, set_readout, set_status};
 use run::Mode;
 use serial::Link;
 
@@ -80,13 +86,17 @@ fn main() {
     let context = window.gl();
 
     let mut scene = scene::Scene::new(&context, window.viewport());
+    let mut calibration = scene::CalibrationScene::new(&context, window.viewport());
     let link = Rc::new(RefCell::new(Link::default()));
 
     wire_connect_button(link.clone());
+    let keys = dom::watch_keys();
 
     let mut last_reported = String::new();
+    let mut last_readout = (None, None);
+    let mut last_mode = Mode::Model;
 
-    window.render_loop(move |frame_input| {
+    window.render_loop(move |mut frame_input| {
         let mut state = link.borrow_mut();
 
         // The same wall clock `serial` stamps packets with. This is also the
@@ -95,29 +105,70 @@ fn main() {
         state.run.tick(js_sys::Date::now());
 
         let orientation = state.orientation.unwrap_or(glam::Quat::IDENTITY);
+
+        // Escape dismisses a landed run; space compares the corrected cloud
+        // against the raw one. Read before the mode is, so a dismissal takes
+        // effect on the frame it happened rather than the next one.
+        let keys = dom::take_keys(&keys);
+        if keys.dismiss {
+            state.run.dismiss();
+        }
+        // Nothing to compare against until an offset was adopted, and a
+        // refusal's packet holds the board's *old* one.
+        if keys.compare && state.run.adopted_offset().is_some() {
+            calibration.set_snap(!calibration.snapped());
+        }
+
         let mode = state.run.mode();
+
+        // A run starting is the one moment everything the view accumulated —
+        // scale, camera, snap — has to go, and it is the mode edge rather than
+        // an empty sample list, because a run's first packet already has one.
+        if mode == Mode::Calibrating && last_mode != Mode::Calibrating {
+            calibration.begin();
+        }
+        // And a run landing on an adopted offset plays the snap by itself. It
+        // is the answer arriving; waiting for a keypress to show it would make
+        // the payoff of the whole run something you have to know to ask for.
+        if mode == Mode::Landed && last_mode == Mode::Calibrating {
+            calibration.set_snap(state.run.adopted_offset().is_some());
+        }
+        last_mode = mode;
 
         // The run owns the status line whenever it has something to say; the
         // packet counter is what is left the rest of the time.
-        let status = state.run.status().unwrap_or_else(|| {
-            format!("{} packets · {} dropped", state.good, state.bad)
-        });
+        let status = state
+            .run
+            .status()
+            .unwrap_or_else(|| format!("{} packets · {} dropped", state.good, state.bad));
         if status != last_reported {
             last_reported.clone_from(&status);
             set_status(&status);
         }
 
+        let readout = (state.run.metrics(), state.run.constant_line());
+        if readout != last_readout {
+            last_readout = readout;
+            set_readout(last_readout.0.as_deref(), last_readout.1.as_deref());
+        }
+
         match mode {
-            // `Landed` shows the model again, with the answer in the status
-            // line. The model snapping true is the payoff of the whole run, so
-            // the cloud gets out of its way once there is nothing left to
-            // collect.
-            Mode::Model | Mode::Landed => {
+            Mode::Model => {
                 drop(state);
                 scene.draw(&frame_input, orientation);
             }
-            Mode::Calibrating => {
-                scene::draw_calibration(&frame_input, state.run.samples());
+
+            // `Landed` keeps the cloud. The offset is only meaningful as a
+            // distance from this cloud to the origin, so the two have to be on
+            // screen together — and the snap, which is the payoff of the whole
+            // run, has nothing to move if the cloud has already gone.
+            Mode::Calibrating | Mode::Landed => {
+                calibration.draw(
+                    &mut frame_input,
+                    state.run.samples(),
+                    state.run.latest(),
+                    state.run.adopted_offset(),
+                );
             }
         }
 

@@ -30,6 +30,7 @@ features = [
     "Document",
     "Element",
     "HtmlElement",
+    "KeyboardEvent",
     "Navigator",
     "Window",
     # The Web Serial API. Everything in this group sits behind

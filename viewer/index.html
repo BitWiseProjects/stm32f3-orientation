@@ -12,6 +12,9 @@
         --graticule: #1f2836;
         --amber: #f0a32c;
         --amber-hover: #ffb84d;
+        --cyan: #5cc6d8;
+        --green: #4ade80;
+        --green-dim: #86efac;
         --paper: #e6e9ee;
         --muted: #8593a6;
       }
@@ -69,6 +72,55 @@
         color: var(--muted);
         font-variant-numeric: tabular-nums;
       }
+
+      /* The numbers from the run, under the panel. Hidden by set_readout
+         between runs rather than sitting there showing the last one. */
+      #readout {
+        position: fixed;
+        top: 5rem;
+        left: 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--panel);
+        border: 1px solid var(--graticule);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      #metrics {
+        margin: 0;
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--paper);
+      }
+
+      #constant {
+        font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--green);
+        user-select: all;
+        word-break: break-all;
+      }
+
+      #copy {
+        font: inherit;
+        font-size: 13px;
+        color: var(--paper);
+        background: transparent;
+        border: 1px solid var(--graticule);
+        border-radius: 6px;
+        padding: 0.35rem 0.75rem;
+        cursor: pointer;
+        align-self: flex-start;
+      }
+
+      #copy:hover {
+        border-color: var(--green);
+      }
+
+      #keys {
+        color: var(--muted);
+        font-size: 13px;
+      }
     </style>
   </head>
   <body>
@@ -82,5 +134,28 @@
       <button id="connect">Connect</button>
       <span id="status">not connected</span>
     </div>
+
+    <!-- Filled by dom::set_readout, and hidden by it whenever there is no run
+         to report on. -->
+    <div id="readout" style="display: none">
+      <pre id="metrics"></pre>
+      <code id="constant"></code>
+      <button id="copy">Copy constant</button>
+      <span id="keys">drag to look · space compares · esc back to the board</span>
+    </div>
+
+    <script>
+      // Clipboard only, and only out of an element this page filled — so it
+      // stays here rather than costing the wasm bundle a web-sys feature.
+      document.getElementById("copy").addEventListener("click", (event) => {
+        const button = event.currentTarget;
+        navigator.clipboard
+          .writeText(document.getElementById("constant").textContent)
+          .then(() => {
+            button.textContent = "Copied";
+            setTimeout(() => (button.textContent = "Copy constant"), 1200);
+          });
+      });
+    </script>
   </body>
 </html>
