@@ -67,8 +67,13 @@ pub enum Mode {
     Model,
     /// A run is going: the point cloud.
     Calibrating,
-    /// A run has finished. Back to the model, with [`Run::outcome`] holding
-    /// what happened.
+    /// A run has finished and the cloud stays on screen, with [`Run::outcome`]
+    /// holding what happened.
+    ///
+    /// The view does not leave on its own. An offset only means anything
+    /// against the cloud it was fitted to, so the two have to be on screen
+    /// together — that is the whole of the snap. [`Run::dismiss`] is what puts
+    /// the model back.
     Landed,
 }
 
@@ -124,21 +129,41 @@ impl Run {
     }
 
     /// How the last run finished.
-    ///
-    /// Read by the tests and by nothing else yet — the status line goes through
-    /// [`status`](Self::status) instead. 2.2 is what draws an outcome, and until
-    /// then this is the seam it will read through.
-    #[allow(dead_code)]
     pub fn outcome(&self) -> Option<&Outcome> {
         self.outcome.as_ref()
     }
 
+    /// The most recent calibration packet of this run, whatever state it was
+    /// in. The readout reads its numbers; the view reads its sector mask.
+    pub fn latest(&self) -> Option<&packet::Calibration> {
+        self.latest.as_ref()
+    }
+
     /// Whether the cloud is the whole run or only the first [`SAMPLE_CAP`] of
-    /// it. Same story as [`outcome`](Self::outcome): 2.2 has to show this
-    /// rather than display a truncated cloud as if it were complete.
-    #[allow(dead_code)]
+    /// it — so the display can say so rather than show a truncated cloud as if
+    /// it were complete.
     pub fn truncated(&self) -> bool {
         self.truncated
+    }
+
+    /// The offset the board actually adopted, if it adopted one.
+    ///
+    /// `None` for every other ending, and that is deliberate: a refusal packet
+    /// carries the board's *old* offset, and subtracting that from this run's
+    /// cloud would draw a snap that never happened.
+    pub fn adopted_offset(&self) -> Option<Vec3> {
+        match self.outcome()? {
+            Outcome::Solved(packet) => Some(packet.offset),
+            Outcome::Refused(_) | Outcome::Ended => None,
+        }
+    }
+
+    /// Put the model back after a landed run. Does nothing mid-run — the board
+    /// decides when a run ends, not the page.
+    pub fn dismiss(&mut self) {
+        if self.mode == Mode::Landed {
+            self.mode = Mode::Model;
+        }
     }
 
     /// Take in one calibration packet. `now` is milliseconds on any clock, as
@@ -252,11 +277,63 @@ impl Run {
 
                 // Says nothing about why, because it does not know. The board
                 // may well have solved and had the packet corrupted on the way.
-                Outcome::Ended => {
-                    "the run ended without an answer — check the board".to_string()
-                }
+                Outcome::Ended => "the run ended without an answer — check the board".to_string(),
             }),
         }
+    }
+
+    /// The numbers block beside the canvas, or `None` when there is no run to
+    /// report on.
+    ///
+    /// Every one of these is read straight off the packet. The page fits
+    /// nothing — the board did the arithmetic, and a second fit in the browser
+    /// could disagree with the one actually adopted, which would be the most
+    /// confusing possible bug to have.
+    pub fn metrics(&self) -> Option<String> {
+        if self.mode == Mode::Model {
+            return None;
+        }
+        let packet = self.latest.as_ref()?;
+
+        let mut out = format!(
+            "samples   {}\nspread    {:.3}\nbearings  {} of {}\n",
+            packet.samples,
+            packet.spread,
+            packet.sectors.count_ones(),
+            crate::cloud::SECTORS,
+        );
+
+        // A zero radius is what a refusal sends, and dividing a residual by it
+        // gives an infinity or a NaN on screen.
+        if packet.radius > 0.0 {
+            out.push_str(&format!(
+                "offset    {:.0}, {:.0}, {:.0} nT\nfield     {:.0} nT\nscatter   {:.1} %\n",
+                packet.offset.x,
+                packet.offset.y,
+                packet.offset.z,
+                packet.radius,
+                100.0 * packet.residual / packet.radius,
+            ));
+        }
+
+        if self.truncated() {
+            out.push_str(&format!("\nthe cloud stops at {SAMPLE_CAP} samples\n"));
+        }
+
+        Some(out)
+    }
+
+    /// The line to paste into the firmware, once there is one worth pasting.
+    ///
+    /// Only after a solve. A refusal's packet holds the offset the board kept,
+    /// which is already in the source — offering it as a result would have
+    /// someone paste back what is on the line above.
+    pub fn constant_line(&self) -> Option<String> {
+        let offset = self.adopted_offset()?;
+        Some(format!(
+            "const MAG_OFFSET_NT: [f32; 3] = [{:.1}, {:.1}, {:.1}];",
+            offset.x, offset.y, offset.z
+        ))
     }
 
     fn begin(&mut self) {
@@ -356,6 +433,74 @@ mod tests {
         // The terminal packet's own sample belongs to the run too.
         assert_eq!(run.samples().len(), 41);
         assert!(run.status().unwrap().starts_with("solved · offset"));
+    }
+
+    #[test]
+    fn only_a_solve_offers_an_offset_to_apply_or_to_paste() {
+        // A refusal packet carries the offset the board *kept*, so treating it
+        // as a result would draw a snap that never happened and hand over a
+        // constant that is already in the source.
+        let mut run = Run::default();
+        let now = a_run_in_progress(&mut run);
+        run.push(packet(RunState::Refused, FitStatus::Coplanar), now + 20.0);
+        assert_eq!(run.adopted_offset(), None);
+        assert_eq!(run.constant_line(), None);
+
+        let mut run = Run::default();
+        let now = a_run_in_progress(&mut run);
+        let solved = packet(RunState::Solved, FitStatus::Ok);
+        run.push(solved, now + 20.0);
+        assert_eq!(run.adopted_offset(), Some(solved.offset));
+        assert_eq!(
+            run.constant_line().unwrap(),
+            "const MAG_OFFSET_NT: [f32; 3] = [9265.5, -28189.5, -11732.9];"
+        );
+    }
+
+    #[test]
+    fn the_readout_arrives_with_the_run_and_leaves_when_it_is_dismissed() {
+        let mut run = Run::default();
+        assert_eq!(run.metrics(), None, "nothing to report before a run");
+
+        let now = a_run_in_progress(&mut run);
+        let mid_run = run.metrics().unwrap();
+        assert!(mid_run.contains("samples   1512"), "{mid_run}");
+        assert!(mid_run.contains("bearings  7 of 8"), "{mid_run}");
+
+        run.push(packet(RunState::Solved, FitStatus::Ok), now + 20.0);
+        assert!(run.metrics().is_some());
+
+        run.dismiss();
+        assert_eq!(run.mode(), Mode::Model);
+        assert_eq!(run.metrics(), None);
+    }
+
+    #[test]
+    fn a_refusal_reports_no_field_rather_than_dividing_by_its_zero_radius() {
+        // Scatter is the residual over the radius, and a refusal sends a zero
+        // radius — printed unguarded that is a NaN or an infinity on screen.
+        let mut run = Run::default();
+        let now = a_run_in_progress(&mut run);
+        let mut refused = packet(RunState::Refused, FitStatus::Scattered);
+        refused.radius = 0.0;
+        refused.residual = 0.0;
+        run.push(refused, now + 20.0);
+
+        let metrics = run.metrics().unwrap();
+        assert!(!metrics.contains("NaN"), "{metrics}");
+        assert!(!metrics.contains("inf"), "{metrics}");
+        assert!(!metrics.contains("field"), "{metrics}");
+        assert!(metrics.contains("samples"), "{metrics}");
+    }
+
+    #[test]
+    fn the_page_cannot_dismiss_a_run_that_is_still_going() {
+        // The board owns the end of a run. Escape mid-run would leave the page
+        // showing the model while the board was still collecting.
+        let mut run = Run::default();
+        a_run_in_progress(&mut run);
+        run.dismiss();
+        assert_eq!(run.mode(), Mode::Calibrating);
     }
 
     #[test]

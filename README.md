@@ -140,10 +140,18 @@ the port picker only appears in response to a real click. That is the permission
 model working as intended.
 
 With `07_fused`, pressing the board's blue USER button also switches the page to
-its calibration view and back again. There is no control for that on the page:
-the board says in its packets that a run has started, and the page follows. So
-the only thing to press is the one on the board, and the older stages — which
-never send those packets — go on working untouched.
+its calibration view. There is no control for that on the page: the board says
+in its packets that a run has started, and the page follows. So the only thing
+to press is the one on the board, and the older stages — which never send those
+packets — go on working untouched.
+
+That view is the samples as a point cloud, the origin marked, and the offset
+drawn as an arrow from the origin to where the cloud is actually centred. When
+the board solves, the cloud slides onto the origin — the correction, applied,
+on the same data — and the offset appears as a line to paste into the firmware.
+The camera drifts on its own until you drag it, and then it is yours. **Space**
+compares the corrected cloud against the raw one, and **Escape** goes back to
+the board.
 
 The viewer has a few tests of its own, covering when that switch happens and
 what it says when a run ends badly. They need the host target named explicitly,
