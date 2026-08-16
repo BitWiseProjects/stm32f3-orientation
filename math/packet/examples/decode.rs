@@ -30,12 +30,11 @@
 //!
 //! Those are the raw magnetometer readings, in nanotesla, before any offset is
 //! taken off them — the same numbers the board itself fitted. Two things read
-//! that file: `magcal`'s `survey` example, which runs the fit the firmware
-//! runs, and `notes/fit_sphere.py`, which runs an unrelated one in another
-//! language. Handing both of them the identical bytes is the whole point. Two
-//! implementations agreeing on the same samples is evidence; two
-//! implementations agreeing on samples they each reconstructed differently is
-//! not.
+//! that file today: `magcal`'s `survey` example, which runs the fit the
+//! firmware runs. Writing the samples out rather than fitting them here is the
+//! whole point — any second opinion, in any language, gets handed the identical
+//! bytes. Two fits agreeing on the same samples is evidence; two fits agreeing
+//! on samples they each reconstructed differently is not.
 //!
 //! Idle packets are left out. The board sends those between runs, and their
 //! sample is wherever the board happens to be sitting — a cluster of nearly

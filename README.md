@@ -84,22 +84,18 @@ on the page.
 ### Fitting a calibration on your laptop
 
 The same tool will extract the raw magnetometer samples out of a capture
-instead of reporting on it, and from there two separate programs will fit them:
+instead of reporting on it, and `magcal`'s survey example fits them with the
+same code the board runs:
 
 ```
 cargo run -p packet --example decode -- board.bin --csv > samples.csv
-cargo run -p magcal --example survey -- samples.csv       # the fit the board runs
-../firmware/notes/fit_sphere.py samples.csv               # an unrelated one, in Python
+cargo run -p magcal --example survey -- samples.csv
 ```
 
-Both read that one file, and that is the whole point of it existing. They are
-independent implementations of the same estimator in different languages, so
-when they agree on the same bytes, the agreement is evidence rather than
-coincidence. If each captured its own samples instead, it would be neither.
-
-`fit_sphere.py` is stdlib-only — no numpy, no venv — and it also scores
-candidate offsets against a capture rather than only fitting new ones, which is
-how the constant compiled into the firmware was chosen.
+Splitting it in two is the point: the capture is a file, so the same bytes can
+be re-fitted as often as you like, by this or by anything else that reads a CSV.
+A tool that captured its own samples could never be checked against a second
+opinion.
 
 ## Flashing, in order
 

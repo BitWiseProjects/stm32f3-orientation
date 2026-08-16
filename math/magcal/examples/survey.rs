@@ -12,10 +12,10 @@
 //! the board reported. If it does not, the difference is the board's `f32`
 //! accumulation against your laptop's, and that is worth knowing about.
 //!
-//! `notes/fit_sphere.py` reads this identical file and fits it a different way,
-//! in a different language. Two implementations agreeing here is a real check
-//! on the maths; that is why the CSV exists rather than each tool capturing its
-//! own samples.
+//! The CSV is why this is possible at all: the samples are a file, so anything
+//! that reads a CSV can re-fit the identical bytes and be compared against the
+//! board's answer. A tool that captured its own samples could only ever be
+//! compared against a different run.
 //!
 //! Expect a captured *flat spin* to be refused. That is the point — see the
 //! crate docs on why a circle cannot locate the centre of a sphere.
