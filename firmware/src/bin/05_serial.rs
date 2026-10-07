@@ -243,7 +243,9 @@ fn main() -> ! {
         // which is a heading, and the one thing the ring can show.
         let forward = orientation * Vec3::Y;
         let heading = wrap_degrees(libm::atan2f(forward.x, forward.y).to_degrees());
-        show(ring_pattern(heading));
+        // Minus the heading, so the lit LED holds still in the room rather
+        // than turning with the board.
+        show(ring_pattern(wrap_degrees(-heading)));
 
         ticks = ticks.wrapping_add(1);
         if ticks % SAMPLE_HZ == 0 {

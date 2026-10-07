@@ -108,7 +108,7 @@ const DEGREES_TO_RADIANS: f32 = core::f32::consts::PI / 180.0;
 ///
 /// - `accel` should read about `(0, 0, +1)` g. If gravity turns up on a
 ///   different axis, or negative, this is where to fix it.
-/// - Tilt the far edge up: `accel.y` should go negative, `accel.z` stays
+/// - Tilt the far edge up: `accel.y` should go positive, `accel.z` stays
 ///   positive.
 /// - Turn the board clockwise seen from above: `gyro.z` should read negative,
 ///   because that is a clockwise turn about an axis pointing up.
@@ -122,8 +122,9 @@ fn gyro_to_body(v: Vec3) -> Vec3 {
     v
 }
 
+/// The LSM303AGR's X points left on this board, so it is flipped.
 fn accel_to_body(v: Vec3) -> Vec3 {
-    v
+    Vec3::new(-v.x, v.y, v.z)
 }
 
 /// Light exactly the LEDs whose bit is set. See stage 1 for what `BSRR` is.
@@ -325,7 +326,9 @@ fn main() -> ! {
         // stage cannot fix — so expect it to walk. That is the honest display.
         let forward = orientation * Vec3::Y;
         let heading = wrap_degrees(libm::atan2f(forward.x, forward.y).to_degrees());
-        show(ring_pattern(heading));
+        // Minus the heading, so the lit LED holds still in the room rather
+        // than turning with the board.
+        show(ring_pattern(wrap_degrees(-heading)));
 
         ticks = ticks.wrapping_add(1);
         if ticks % SAMPLE_HZ == 0 {
