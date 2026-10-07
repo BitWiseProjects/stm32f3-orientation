@@ -200,7 +200,7 @@ const MIN_RUN_TICKS: u32 = MIN_RUN_SECONDS * SAMPLE_HZ;
 ///
 /// - `accel` should read about `(0, 0, +1)` g. If gravity turns up on a
 ///   different axis, or negative, this is where to fix it.
-/// - Tilt the far edge up: `accel.y` should go negative, `accel.z` stays
+/// - Tilt the far edge up: `accel.y` should go positive, `accel.z` stays
 ///   positive.
 /// - Turn the board clockwise seen from above: `gyro.z` should read negative,
 ///   because that is a clockwise turn about an axis pointing up.
@@ -211,12 +211,14 @@ fn gyro_to_body(v: Vec3) -> Vec3 {
     v
 }
 
+/// The LSM303AGR's X points left on this board, so it is flipped.
 fn accel_to_body(v: Vec3) -> Vec3 {
-    v
+    Vec3::new(-v.x, v.y, v.z)
 }
 
+/// Same chip, same flip.
 fn mag_to_body(v: Vec3) -> Vec3 {
-    v
+    Vec3::new(-v.x, v.y, v.z)
 }
 
 /// Light exactly the LEDs whose bit is set. See stage 1 for what `BSRR` is.
@@ -704,7 +706,9 @@ fn main() -> ! {
 
         match &mut mode {
             Mode::Fused => {
-                show(ring_pattern(heading));
+                // Minus the heading, so the lit LED points at north rather than
+                // at the board's own bearing.
+                show(ring_pattern(wrap_degrees(-heading)));
 
                 if ticks % IDLE_CAL_EVERY_TICKS == 0 {
                     let bytes =

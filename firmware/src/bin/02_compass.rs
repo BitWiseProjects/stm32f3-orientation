@@ -83,8 +83,9 @@ const EXPECTED_ACCEL_ID: u8 = 0x33;
 /// instead of against it — see the note at the top of this file.
 const HEADING_SENSE: f32 = 1.0;
 
-/// Rotation between the sensor's idea of zero and the ring's North.
-const HEADING_OFFSET_DEG: f32 = 0.0;
+/// Rotation between the sensor's idea of zero and the ring's North. `-90`
+/// because the magnetometer's +X points left and +Y toward the USB end.
+const HEADING_OFFSET_DEG: f32 = -90.0;
 
 /// Display update interval. The magnetometer is configured for 50 Hz below,
 /// so this is not throwing readings away.

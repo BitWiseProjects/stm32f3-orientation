@@ -78,8 +78,7 @@
 //! # The two constants at the bottom of the bench, still
 //!
 //! [`HEADING_SENSE`] and [`HEADING_OFFSET_DEG`] are carried over from stage 2
-//! unchanged, and they are **deliberately still both at their do-nothing
-//! values.** Do not tune them until a calibration run has been done and the
+//! unchanged. Do not tune them until a calibration run has been done and the
 //! light holds still: any value fitted before that is fitting the hard iron,
 //! and will be wrong the moment the hard iron is gone.
 //!
@@ -148,8 +147,9 @@ const MAG_OFFSET_NT: [f32; 3] = [8062.6, -30600.0, -9042.9];
 /// instead of against it — see the note at the top of this file.
 const HEADING_SENSE: f32 = 1.0;
 
-/// Rotation between the sensor's idea of zero and the ring's North.
-const HEADING_OFFSET_DEG: f32 = 0.0;
+/// Rotation between the sensor's idea of zero and the ring's North. `-90`
+/// because the magnetometer's +X points left and +Y toward the USB end.
+const HEADING_OFFSET_DEG: f32 = -90.0;
 
 /// Display update interval. The magnetometer is configured for 50 Hz below,
 /// so this is not throwing readings away.

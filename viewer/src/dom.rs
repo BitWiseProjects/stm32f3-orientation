@@ -37,9 +37,11 @@ pub struct Keys {
     pub compare: bool,
     /// Escape: put the board back.
     pub dismiss: bool,
+    /// A: turn the camera to sit behind the board.
+    pub align: bool,
 }
 
-/// Start watching for the two shortcut keys. The handle is shared with the
+/// Start watching for the shortcut keys. The handle is shared with the
 /// render loop, which takes what it finds and clears it.
 pub fn watch_keys() -> Rc<Cell<Keys>> {
     let keys = Rc::new(Cell::new(Keys::default()));
@@ -55,6 +57,7 @@ pub fn watch_keys() -> Rc<Cell<Keys>> {
             match event.key().as_str() {
                 " " | "Spacebar" => pending.compare = true,
                 "Escape" | "Esc" => pending.dismiss = true,
+                "a" | "A" => pending.align = true,
                 _ => return,
             }
             // Space scrolls the page and activates whatever button has focus.
