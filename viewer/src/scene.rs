@@ -25,6 +25,14 @@ const BOARD_HALF_EXTENTS: glam::Vec3 = glam::Vec3::new(0.033, 0.048, 0.005);
 
 const MARKER_HALF_EXTENTS: glam::Vec3 = glam::Vec3::new(0.010, 0.010, 0.003);
 
+/// Where the camera sits before anyone aligns it: south of the board, looking
+/// north.
+const EYE: glam::Vec3 = glam::Vec3::new(0.0, -0.24, 0.13);
+
+/// The key light's direction for that same camera. It turns with the camera so
+/// the board is lit the same way whichever way the view faces.
+const KEY_DIRECTION: glam::Vec3 = glam::Vec3::new(-0.4, 0.6, -1.0);
+
 // The brand palette, from `bitwise-brand-colors.md`.
 const INK: (f32, f32, f32) = (0.055, 0.071, 0.102);
 const GRATICULE: Srgba = Srgba::new(0x1F, 0x28, 0x36, 255);
@@ -55,7 +63,7 @@ impl Scene {
         // would be holding it.
         let camera = Camera::new_perspective(
             viewport,
-            vec3(0.0, -0.24, 0.13),
+            to_render_vec(EYE),
             vec3(0.0, 0.0, 0.0),
             vec3(0.0, 0.0, 1.0),
             degrees(45.0),
@@ -67,9 +75,31 @@ impl Scene {
             camera,
             body: block(context, MUTED),
             marker: block(context, AMBER),
-            key: DirectionalLight::new(context, 2.0, Srgba::WHITE, vec3(-0.4, 0.6, -1.0)),
+            key: DirectionalLight::new(context, 2.0, Srgba::WHITE, to_render_vec(KEY_DIRECTION)),
             fill: AmbientLight::new(context, 0.4, Srgba::WHITE),
         }
+    }
+
+    /// Swing the camera round behind the board, so the board's front points
+    /// away from the viewer. Only the compass direction changes — height and
+    /// tilt stay as they were. Does nothing if the board is pointing straight
+    /// up or down, where it has no compass direction to follow.
+    pub fn align(&mut self, rotation: glam::Quat) {
+        let forward = rotation * glam::Vec3::Y;
+        let horizontal = glam::Vec2::new(forward.x, forward.y);
+        if horizontal.length() < 0.1 {
+            return;
+        }
+
+        // The turn about Z that takes north (+Y) to the board's heading.
+        let yaw = glam::Quat::from_rotation_z(f32::atan2(-horizontal.x, horizontal.y));
+
+        self.camera.set_view(
+            to_render_vec(yaw * EYE),
+            vec3(0.0, 0.0, 0.0),
+            vec3(0.0, 0.0, 1.0),
+        );
+        self.key.direction = to_render_vec(yaw * KEY_DIRECTION);
     }
 
     /// Put the board where the packets say it is, and draw the frame.

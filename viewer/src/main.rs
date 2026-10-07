@@ -118,6 +118,9 @@ fn main() {
         if keys.compare && state.run.adopted_offset().is_some() {
             calibration.set_snap(!calibration.snapped());
         }
+        if keys.align {
+            scene.align(orientation);
+        }
 
         let mode = state.run.mode();
 
