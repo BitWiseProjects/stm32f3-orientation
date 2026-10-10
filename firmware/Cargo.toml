@@ -56,6 +56,53 @@ magcal = { path = "../math/magcal" }
 # them compile the one file that describes it rather than a copy each.
 packet = { path = "../math/packet" }
 
+# No test harness: `test` does not exist for a bare-metal target, so
+# `cargo check --all-targets` (and rust-analyzer) would fail on every bin.
+[[bin]]
+name = "00_ring"
+test = false
+bench = false
+
+[[bin]]
+name = "01_ring"
+test = false
+bench = false
+
+[[bin]]
+name = "02_compass"
+test = false
+bench = false
+
+[[bin]]
+name = "03_calibrate"
+test = false
+bench = false
+
+[[bin]]
+name = "04_gyro"
+test = false
+bench = false
+
+[[bin]]
+name = "05_serial"
+test = false
+bench = false
+
+[[bin]]
+name = "06_gravity"
+test = false
+bench = false
+
+[[bin]]
+name = "07_fused"
+test = false
+bench = false
+
+[[bin]]
+name = "99_axes"
+test = false
+bench = false
+
 [profile.dev]
 opt-level = 's'
 codegen-units = 1

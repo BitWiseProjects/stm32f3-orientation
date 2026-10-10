@@ -228,7 +228,7 @@ fn main() -> ! {
         show(ring_pattern(heading));
 
         ticks = ticks.wrapping_add(1);
-        if ticks % SAMPLE_HZ == 0 {
+        if ticks.is_multiple_of(SAMPLE_HZ) {
             defmt::println!("rate {=f32} dps   accumulated {=f32} deg", rate_dps, heading);
         }
     }
