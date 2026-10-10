@@ -7,6 +7,9 @@ rustflags = [
   # flip-link puts the stack below RAM instead of above it, so a stack
   # overflow faults immediately rather than quietly eating your variables.
   "-C", "linker=flip-link",
+  # `asm::delay` aligns its loop to 8 bytes, and .text would otherwise start
+  # at 0x08000194, straight after the vector table.
+  "-C", "link-arg=--defsym=_stext=0x080001a0",
   "-C", "link-arg=-Tlink.x",
   "-C", "link-arg=-Tdefmt.x",
   # Needed because the flash and RAM addresses are not aligned to 0x10000.
