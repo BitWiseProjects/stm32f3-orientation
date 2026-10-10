@@ -443,7 +443,7 @@ fn main() -> ! {
                 let heading = wrap_degrees(angle * HEADING_SENSE + HEADING_OFFSET_DEG);
                 show(ring_pattern(heading));
 
-                if ticks % 50 == 0 {
+                if ticks.is_multiple_of(50) {
                     defmt::println!(
                         "field {=f32} {=f32} {=f32} nT   heading {=f32} deg",
                         corrected.x,
@@ -488,10 +488,10 @@ fn main() -> ! {
                 let lit = progress_pattern(by_samples.min(by_spread).min(by_clock));
 
                 // Blinking while there is still work to do, solid when done.
-                let blink_off = !ready && (ticks / BLINK_STEPS) % 2 == 0;
+                let blink_off = !ready && (ticks / BLINK_STEPS).is_multiple_of(2);
                 show(if blink_off { 0 } else { lit });
 
-                if ticks % 25 == 0 {
+                if ticks.is_multiple_of(25) {
                     defmt::println!(
                         "samples {=u32}  bearings {=u8:#010b}  spread {=f32}",
                         fit.samples(),

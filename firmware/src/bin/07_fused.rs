@@ -710,13 +710,13 @@ fn main() -> ! {
                 // at the board's own bearing.
                 show(ring_pattern(wrap_degrees(-heading)));
 
-                if ticks % IDLE_CAL_EVERY_TICKS == 0 {
+                if ticks.is_multiple_of(IDLE_CAL_EVERY_TICKS) {
                     let bytes =
                         calibration_packet(sensor_mag, &calibration, None, solved.as_ref());
                     serial.bwrite_all(&bytes).ok();
                 }
 
-                if ticks % SAMPLE_HZ == 0 {
+                if ticks.is_multiple_of(SAMPLE_HZ) {
                     let up = orientation * Vec3::Z;
                     defmt::println!(
                         "heading {=f32} deg   tilt {=f32} deg   after {} s",
@@ -766,10 +766,10 @@ fn main() -> ! {
                 let by_clock = elapsed as f32 / MIN_RUN_TICKS as f32;
                 let lit = progress_pattern(by_samples.min(by_spread).min(by_clock));
 
-                let blink_off = !ready && (ticks / BLINK_TICKS) % 2 == 0;
+                let blink_off = !ready && (ticks / BLINK_TICKS).is_multiple_of(2);
                 show(if blink_off { 0 } else { lit });
 
-                if ticks % CAL_EVERY_TICKS == 0 {
+                if ticks.is_multiple_of(CAL_EVERY_TICKS) {
                     let bytes =
                         calibration_packet(sensor_mag, &calibration, Some(fit), solved.as_ref());
                     serial.bwrite_all(&bytes).ok();

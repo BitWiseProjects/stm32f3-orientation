@@ -230,7 +230,7 @@ fn main() -> ! {
         // Once a second, so the terminal stays readable while the ring runs at
         // fifty times that.
         ticks = ticks.wrapping_add(1);
-        if ticks % 50 == 0 {
+        if ticks.is_multiple_of(50) {
             defmt::println!(
                 "field {=i32} {=i32} {=i32} nT   heading {=f32} deg",
                 field.x_nt(),

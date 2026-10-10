@@ -248,7 +248,7 @@ fn main() -> ! {
         show(ring_pattern(wrap_degrees(-heading)));
 
         ticks = ticks.wrapping_add(1);
-        if ticks % SAMPLE_HZ == 0 {
+        if ticks.is_multiple_of(SAMPLE_HZ) {
             defmt::println!("heading {=f32} deg after {} seconds", heading, ticks / SAMPLE_HZ);
         }
     }
