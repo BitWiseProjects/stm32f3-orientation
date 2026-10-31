@@ -1,0 +1,9 @@
+[package]
+name = "attitude"
+description = "Sensor fusion: calibrated rates and fields in, orientation quaternion out."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+glam = { workspace = true }

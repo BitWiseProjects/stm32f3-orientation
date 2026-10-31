@@ -1,0 +1,27 @@
+# The maths, as its own workspace.
+#
+# No crate here names a target. That is the point: `cargo test` runs them on
+# your laptop, and the firmware and the browser both compile the exact same
+# source. A quaternion bug can be caught in a unit test here instead of by
+# staring at a board that is slowly tipping over.
+#
+# `packet` is the odd one out — it is a wire format rather than maths. It lives
+# here because "source both targets compile" is what this directory really is,
+# and that is exactly the property the format needs.
+[workspace]
+resolver = "3"
+members = ["attitude", "magcal", "packet", "vector"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# `libm` instead of std's float maths, so the crates build for a target with
+# no operating system. `default-features = false` is what turns std off.
+glam = { version = "0.33", default-features = false, features = ["libm"] }
+
+# The same float maths, reachable directly. `glam` vendors it for vectors, but
+# a bare `f64::sqrt` is a `std` method and there is no other way to get one.
+libm = "0.2"
